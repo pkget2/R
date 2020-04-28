@@ -43,3 +43,48 @@ data_fs = sapply(data_fs, function(x) {
   data.frame(., row.names = rownames(data_fs))
 
 write.csv(data_fs, 'data/KOR_fs/000660_fs.csv')
+
+ifelse(dir.exists('data/KOR_value'), FALSE,
+       dir.create('data/KOR_value'))
+
+value_type = c('지배주주순이익',
+               '자본',
+               '영업활동으로인한현금흐름',
+               '매출액')
+
+value_index = data_fs[match(value_type, rownames(data_fs)),
+                      ncol(data_fs)]
+
+
+
+library(readr)
+
+url = 'http://comp.fnguide.com/SVO2/ASP/SVD_main.asp?pGB=1&gicode=A000660'
+data = GET(url,
+           user_agent('Mozilla/5.0 (Windows NT 10.0; Win64; x64)
+                      AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36'))
+
+price = read_html(data) %>%
+  html_node(xpath = '//*[@id="svdMainChartTxt11"]') %>%
+  html_text() %>%
+  parse_number()
+
+share = read_html(data) %>%
+  html_node(
+    xpath =
+      '//*[@id="svdMainGrid1"]/table/tbody/tr[7]/td[1]') %>%
+  html_text()
+
+share = share %>%
+  strsplit('/') %>%
+  unlist() %>%
+  .[1] %>%
+  parse_number()
+
+print(share)
+
+data_value = price / (value_index * 100000000 / share)
+names(data_value) = c('PER', 'PBR', 'PCR', 'PSR')
+data_value[data_value < 0] = NA
+
+print(data_value)
